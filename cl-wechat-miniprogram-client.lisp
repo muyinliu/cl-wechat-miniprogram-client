@@ -11,7 +11,9 @@
                                     &key
                                       (protocol +wechat-api-protocol+)
                                       (host +wechat-api-host+)
-                                      (uri "/cgi-bin/token"))
+                                      (uri "/cgi-bin/token")
+                                      proxy
+                                      proxy-basic-authorization)
   "Return access_token\(string\).
   API doc of auth.getAccessToken: https://developers.weixin.qq.com/miniprogram/dev/api-backend/open-api/access-token/auth.getAccessToken.html"
   (multiple-value-bind (data status-code headers uri stream must-close-p status-text)
@@ -21,7 +23,9 @@
                                    uri)
                            :parameters (list (cons "grant_type" "client_credential")
                                              (cons "appid" app-id)
-                                             (cons "secret" app-secret)))
+                                             (cons "secret" app-secret))
+                           :proxy proxy
+                           :proxy-basic-authorization proxy-basic-authorization)
     (declare (ignore headers uri stream must-close-p status-text))
     (let ((json (jsown:parse (babel:octets-to-string data :encoding :utf-8))))
       (if (eq 200 status-code)
@@ -54,14 +58,27 @@
    (auto-refresh-access-token-p
     :initarg :auto-refresh-access-token-p
     :initform t
-    :reader auto-refresh-access-token-p)))
+    :reader auto-refresh-access-token-p)
+   (proxy
+    :initarg :proxy
+    :initform nil
+    :accessor proxy
+    :documentation "e.g. '\(\"127.0.0.1\" 8080\)")
+   (proxy-basic-authorization
+    :initarg :proxy-basic-authorization
+    :initform nil
+    :accessor proxy-basic-authorization
+    :documentation "e.g. '\(\"username\" \"password\"\)")))
 
 (defmethod initialize-instance :after ((client wechat-miniprogram-client) &rest args)
   (declare (ignore args))
   (flet ((init-access-token ()
            (setf (slot-value client 'access-token)
-                 (wechat-api-get-access-token (app-id client)
-                                              (app-secret client)))))
+                 (wechat-api-get-access-token
+                  (app-id client)
+                  (app-secret client)
+                  :proxy (proxy client)
+                  :proxy-basic-authorization (proxy-basic-authorization client)))))
     (init-access-token)
     (when (slot-value client 'auto-refresh-access-token-p)
       ;; refresh access-token every hour
@@ -78,13 +95,17 @@
                                        &key
                                          (protocol +wechat-api-protocol+)
                                          (host +wechat-api-host+)
-                                         (auto-refresh-access-token-p t))
+                                         (auto-refresh-access-token-p t)
+                                         proxy
+                                         proxy-basic-authorization)
   (make-instance 'wechat-miniprogram-client
                  :protocol protocol
                  :host host
                  :app-id app-id
                  :app-secret app-secret
-                 :auto-refresh-access-token-p auto-refresh-access-token-p))
+                 :auto-refresh-access-token-p auto-refresh-access-token-p
+                 :proxy proxy
+                 :proxy-basic-authorization proxy-basic-authorization))
 
 (defmethod print-object ((client wechat-miniprogram-client) stream)
   (print-unreadable-object (client stream :type t :identity t)
@@ -112,7 +133,9 @@
                            :parameters (list (cons "grant_type" "authorization_code")
                                              (cons "appid" (app-id client))
                                              (cons "secret" (app-secret client))
-                                             (cons "js_code" js-code)))
+                                             (cons "js_code" js-code))
+                           :proxy (proxy client)
+                           :proxy-basic-authorization (proxy-basic-authorization client))
     (declare (ignore headers uri stream must-close-p status-text))
     (let ((json (jsown:parse (if (stringp data)
                                  data
@@ -134,7 +157,9 @@
                                    (access-token client))
                            :method :post
                            :content-length t
-                           :parameters (list (list "media" pathname)))
+                           :parameters (list (list "media" pathname))
+                           :proxy (proxy client)
+                           :proxy-basic-authorization (proxy-basic-authorization client))
     (declare (ignore headers uri stream must-close-p status-text))
     (if (eq 200 status-code)
         (let ((response (jsown:parse (babel:octets-to-string data :encoding :utf-8))))
@@ -167,7 +192,9 @@
                                      (access-token client))
                              :method :post
                              :content-length t
-                             :content json-string)
+                             :content json-string
+                             :proxy (proxy client)
+                             :proxy-basic-authorization (proxy-basic-authorization client))
       (declare (ignore headers uri stream must-close-p status-text))
       (if (eq 200 status-code)
           (let ((response (jsown:parse (babel:octets-to-string data :encoding :utf-8))))
@@ -198,7 +225,9 @@
                                      (jsown:new-js
                                        ("scene" scene)
                                        ("page" page)
-                                       ("width" width))))
+                                       ("width" width)))
+                           :proxy (proxy client)
+                           :proxy-basic-authorization (proxy-basic-authorization client))
     (declare (ignore headers uri stream must-close-p status-text))
     (if (eq 200 status-code)
         data

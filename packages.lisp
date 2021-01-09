@@ -19,6 +19,8 @@
    #:app-secret
    #:access-token
    #:auto-refresh-access-token-p
+   #:proxy                     ;; e.g. '("127.0.0.1" 8080)
+   #:proxy-basic-authorization ;; e.g. '("username" "password")
    ;; functions
    #:wechat-api-get-access-token
    #:make-wechat-miniprogram-client
