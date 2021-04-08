@@ -266,7 +266,7 @@
   API doc of signature, verification, encryption, and decryption of user data: https://developers.weixin.qq.com/miniprogram/en/dev/framework/open-ability/signature.html#Encryption-Algorithm-for-Encrypted-Data"
   (let* ((decrypt-cipher (ironclad:make-cipher 'ironclad:aes
                                                :key (base64:base64-string-to-usb8-array
-                                                     (concatenate 'string session-key "="))
+                                                     session-key)
                                                :mode 'ironclad:cbc
                                                :initialization-vector
                                                ;; iv 
